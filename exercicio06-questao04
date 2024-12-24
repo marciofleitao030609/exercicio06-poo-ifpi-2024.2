@@ -1,0 +1,286 @@
+class Conta {
+    private id: number;
+    private numero: string;
+    private saldo: number;
+    private cliente: Cliente | null;
+
+    constructor(id: number, numero: string, saldo: number) {
+        this.id = id;
+        this.numero = numero;
+        this.saldo = saldo;
+        this.cliente = null;
+    }
+
+    getId(): number {
+        return this.id;
+    }
+
+    getNumero(): string {
+        return this.numero;
+    }
+
+    getSaldo(): number {
+        return this.saldo;
+    }
+
+    getCliente(): Cliente | null {
+        return this.cliente;
+    }
+
+    setCliente(cliente: Cliente | null): void {
+        this.cliente = cliente;
+    }
+
+    sacar(valor: number): void {
+        if (valor > this.saldo) {
+            console.log("Saldo insuficiente!");
+            return;
+        }
+        this.saldo -= valor;
+    }
+
+    depositar(valor: number): void {
+        this.saldo += valor;
+    }
+
+    consultarSaldo(): number {
+        return this.saldo;
+    }
+
+    transferir(contaDestino: Conta, valor: number): void {
+        if (valor > this.saldo) {
+            console.log("Saldo insuficiente para transferência!");
+            return;
+        }
+        this.sacar(valor);
+        contaDestino.depositar(valor);
+    }
+}
+
+class Cliente {
+    private id: number;
+    private nome: string;
+    private cpf: string;
+    private dataNascimento: Date;
+    private contas: Conta[];
+
+    constructor(id: number, nome: string, cpf: string, dataNascimento: Date) {
+        this.id = id;
+        this.nome = nome;
+        this.cpf = cpf;
+        this.dataNascimento = dataNascimento;
+        this.contas = [];
+    }
+
+    getId(): number {
+        return this.id;
+    }
+
+    getNome(): string {
+        return this.nome;
+    }
+
+    getCpf(): string {
+        return this.cpf;
+    }
+
+    getDataNascimento(): Date {
+        return this.dataNascimento;
+    }
+
+    getContas(): Conta[] {
+        return this.contas;
+    }
+
+    adicionarConta(conta: Conta): void {
+        if (this.contas.find(c => c.getNumero() === conta.getNumero())) {
+            console.log("Esta conta já está associada a este cliente!");
+            return;
+        }
+        this.contas.push(conta);
+        conta.setCliente(this);
+    }
+
+    listarContas(): void {
+        console.log(`Contas do(a) cliente ${this.nome}:`);
+        for (let conta of this.contas) {
+            console.log(`- Conta número: ${conta.getNumero()}, Saldo: ${conta.getSaldo()}`);
+        }
+    }
+
+    totalizarSaldo(): number {
+        return this.contas.reduce((total, conta) => total + conta.getSaldo(), 0);
+    }
+}
+
+class Banco {
+    private contas: Conta[] = [];
+    public clientes: Cliente[] = [];
+
+    constructor() {
+        this.contas = [];
+        this.clientes = [];
+    }
+
+    inserir(c: Conta): void {
+        this.contas.push(c);
+    }
+
+    consultar(numero: string): Conta | null {
+        return this.contas.find(conta => conta.getNumero() === numero) || null;
+    }
+
+    private consultarIndice(numero: string): number {
+        let indice: number = -1;
+        for (let i = 0; i < this.contas.length; i++) {
+            if (this.contas[i].getNumero() === numero) {
+                indice = i;
+                break;
+            }
+        }
+        return indice;
+    }
+
+    excluir(numero: string): void {
+        const indice = this.consultarIndice(numero);
+        if (indice !== -1) {
+            this.contas.splice(indice, 1);
+            console.log(`Conta número ${numero} excluída com sucesso!`);
+        } else {
+            console.log("Conta não encontrada!");
+        }
+    }
+
+    alterar(c: Conta): void {
+        const indice = this.consultarIndice(c.getNumero());
+        if (indice !== -1) {
+            this.contas[indice] = c;
+            console.log(`Conta número ${c.getNumero()} atualizada com sucesso!`);
+        } else {
+            console.log("Conta não encontrada para atualização!");
+        }
+    }
+
+    depositar(numero: string, valor: number): void {
+        const conta = this.consultar(numero);
+        if (conta) {
+            conta.depositar(valor);
+            console.log(`Depósito de R$${valor} realizado na conta número ${numero}`);
+        } else {
+            console.log("Conta não encontrada!");
+        }
+    }
+
+    sacar(numero: string, valor: number): void {
+        const conta = this.consultar(numero);
+        if (conta) {
+            conta.sacar(valor);
+            console.log(`Saque de R$${valor} realizado na conta número ${numero}`);
+        } else {
+            console.log("Conta não encontrada!");
+        }
+    }
+
+    consultarSaldo(numero: string): number {
+        const conta = this.consultar(numero);
+        if (conta) {
+            return conta.consultarSaldo();
+        } else {
+            console.log("Conta não encontrada!");
+            return 0;
+        }
+    }
+
+    transferir(numeroCredito: string, numeroDebito: string, valor: number): void {
+        const contaCredito = this.consultar(numeroCredito);
+        const contaDebito = this.consultar(numeroDebito);
+
+        if (!contaCredito || !contaDebito) {
+            console.log("Uma das contas não foi encontrada!");
+            return;
+        }
+
+        contaDebito.transferir(contaCredito, valor);
+        console.log(`Transferência de R$${valor} realizada da conta ${numeroDebito} para a conta ${numeroCredito}`);
+    }
+
+    transferirParaVarios(numeroDebito: string, contasDestino: Conta[], valor: number): void {
+        const contaDebito = this.consultar(numeroDebito);
+        if (!contaDebito) {
+            console.log("Conta de débito não encontrada!");
+            return;
+        }
+
+        contasDestino.forEach(contaDestino => {
+            contaDebito.transferir(contaDestino, valor);
+            console.log(`Transferência de R$${valor} realizada da conta ${numeroDebito} para a conta ${contaDestino.getNumero()}`);
+        });
+    }
+
+    quantidadeContas(): number {
+        return this.contas.length;
+    }
+
+    totalDepositos(): number {
+        return this.contas.reduce((total, conta) => total + conta.getSaldo(), 0);
+    }
+
+    mediaSaldos(): number {
+        const total = this.totalDepositos();
+        const quantidade = this.quantidadeContas();
+        return quantidade === 0 ? 0 : total / quantidade;
+    }
+
+    inserirCliente(cliente: Cliente): void {
+        if (this.clientes.find(c => c.getId() === cliente.getId() || c.getCpf() === cliente.getCpf())) {
+            console.log("Cliente com o mesmo ID ou CPF já existe!");
+            return;
+        }
+        this.clientes.push(cliente);
+    }
+
+    consultarCliente(cpf: string): Cliente | null {
+        return this.clientes.find(cliente => cliente.getCpf() === cpf) || null;
+    }
+
+    associarContaCliente(numeroConta: string, cpfCliente: string): void {
+        const cliente = this.consultarCliente(cpfCliente);
+        const conta = this.consultar(numeroConta);
+
+        if (!cliente) {
+            console.log("Cliente não encontrado!");
+            return;
+        }
+        if (!conta) {
+            console.log("Conta não encontrada!");
+            return;
+        }
+        if (conta.getCliente()) {
+            console.log("Esta conta já está associada a outro cliente!");
+            return;
+        }
+        cliente.adicionarConta(conta);
+    }
+
+    listarContasCliente(cpf: string): Conta[] {
+        const cliente = this.consultarCliente(cpf);
+        if (!cliente) {
+            console.log("Cliente não encontrado!");
+            return [];
+        }
+        return cliente.getContas();
+    }
+
+    totalizarSaldoCliente(cpf: string): any {
+        const cliente = this.consultarCliente(cpf);
+        if (!cliente) {
+            console.log("Cliente não encontrado!");
+            return 0;
+        }
+        console.log("Informações do(a) cliente:");
+        console.log(`Nome: ${cliente.getNome()}`);
+        console.log(`CPF: ${cliente.getCpf()}`);
+        cliente.listarContas();
+        console.log(`Saldo total: ${cliente.totalizarSaldo()}`);
+    }
+}
